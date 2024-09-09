@@ -1,0 +1,33 @@
+<resources>
+    <string name="app_name">JetFileDownloader</string>
+    <string name="home">Home</string>
+    <string name="download">Downloads</string>
+    <string name="favorite">Favorites</string>
+    <string name="enter_url">Type URL or search…</string>
+    <string name="no_connection">No Connection</string>
+    <string name="error_message">Some error occurred, please try again</string>
+    <string name="retry">RETRY</string>
+    <string name="navigate">Navigate</string>
+    <string name="notif_channel_title">Downloads Notification</string>
+    <string name="notif_channel_desc">Allows you to monitor and interact with your ongoing downloads</string>
+    <string name="service_started">Download service is running</string>
+    <string name="stop_service">STOP SERVICE</string>
+    <string name="download_success">%1$s successfully downloaded</string>
+    <string name="download_error">%1$s download failed!:: %2$s</string>
+    <string name="permission_denied">Required permission denied!</string>
+    <string name="queued">Queued</string>
+    <string name="ongoing">Ongoing…</string>
+    <string name="paused">Paused</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="deleted">Deleted</string>
+    <string name="permission_message">To monitor your files downloading progress and interact with them from your notification panel, you need to allow this app to show notification.</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="file_exist_title">File Exists Already</string>
+    <string name="resume_download">Resume failed download</string>
+    <string name="rename_download">Rename download</string>
+    <string name="file_still_exist">File exist! Please try again</string>
+</resources>
