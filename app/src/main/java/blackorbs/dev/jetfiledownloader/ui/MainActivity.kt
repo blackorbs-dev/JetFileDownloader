@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.StringRes
 import androidx.core.content.FileProvider
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import blackorbs.dev.jetfiledownloader.R
 import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.services.Notifier
@@ -18,6 +19,7 @@ import timber.log.Timber
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 //        enableEdgeToEdge()
         setContent {

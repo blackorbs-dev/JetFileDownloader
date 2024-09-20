@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation (libs.timber)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.core.splashscreen)
 
     //Room
     implementation(libs.androidx.room.runtime)

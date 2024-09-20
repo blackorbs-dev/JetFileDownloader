@@ -7,9 +7,12 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,6 +27,7 @@ import androidx.compose.material3.DismissibleDrawerSheet
 import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.onFocusChanged
@@ -181,6 +186,23 @@ internal fun NavBar(currentPage: Page, onNavItemClicked: (page: Page) -> Unit){
         ),
         drawerContainerColor = Color.Transparent
     ) {
+        Icon(
+            painterResource(R.drawable.ic_download_for_offline_68),
+            contentDescription = stringResource(R.string.app_name),
+            Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(top = 16.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Text(stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .padding(top = 10.dp, bottom = 20.dp)
+                .align(Alignment.CenterHorizontally)
+        )
+        HorizontalDivider()
+        Spacer(Modifier.height(20.dp))
         listOf(
             Page.Home(), Page.DownloadList(), Page.Favorites(),
         ).forEach{ page ->
@@ -388,8 +410,6 @@ internal fun FloatingActionButtons(onFabClicked: (webAction: WebAction) -> Unit)
         @StringRes val titleResId: Int = R.string.download,
         @DrawableRes val iconResId: Int = R.drawable.ic_download_24
     ): Main(titleResId, iconResId)
-
-    @Serializable data object Downloads: Page
 
     @Serializable data class FileInfo(val downloadId: Long): Page
 

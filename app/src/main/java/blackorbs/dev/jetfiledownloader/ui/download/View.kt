@@ -77,7 +77,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import androidx.paging.CombinedLoadStates
 import androidx.paging.LoadState
@@ -107,7 +106,6 @@ fun NavGraphBuilder.downloadPage(
     onShowInfo: (Long) -> Unit,
     onCloseFileInfoPage: () -> Unit
 ){
-    navigation<Page.Downloads>(startDestination = Page.DownloadList()){
         composable<Page.DownloadList>{
             DownloadPage(
                 onDismissBtnClicked = onDismissBtnClicked,
@@ -124,7 +122,6 @@ fun NavGraphBuilder.downloadPage(
                 onShouldGoBack = onCloseFileInfoPage
             )
         }
-    }
 }
 
 @Composable

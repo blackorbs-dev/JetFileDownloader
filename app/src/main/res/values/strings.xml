@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name">JetFileDownloader</string>
+    <string name="app_name">Jet File Downloader</string>
     <string name="home">Home</string>
     <string name="download">Downloads</string>
     <string name="favorite">Favorites</string>

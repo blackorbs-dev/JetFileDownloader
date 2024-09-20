@@ -112,7 +112,7 @@ class DownloadManager(
     private fun continueDownload(download: Download){
         if(permissionManager.permissionNum == 0)
             permissionManager.showNotifPermission()
-        downloadService!!.executeTask(download)
+        downloadService?.executeTask(download)
         pendingDownloads.poll()
     }
 

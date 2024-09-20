@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.JetFileDownloader" parent="android:Theme.Material.NoActionBar" />
+
+    <style name="Theme.JetFileDownloader.SplashScreen" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/deep_blue</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_screen</item>
+        <item name="postSplashScreenTheme">@style/Theme.JetFileDownloader</item>
+    </style>
 </resources>
