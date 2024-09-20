@@ -6,9 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -116,7 +118,20 @@ fun NavGraphBuilder.downloadPage(
             )
         }
 
-        composable<Page.FileInfo>{
+        composable<Page.FileInfo>(
+            exitTransition = {
+                slideOutOfContainer(
+                    animationSpec = tween(500),
+                    towards = AnimatedContentTransitionScope.SlideDirection.End
+                )
+            },
+            enterTransition = {
+                slideIntoContainer(
+                    animationSpec = tween(500),
+                    towards = AnimatedContentTransitionScope.SlideDirection.Start
+                )
+            }
+        ){
             InfoPage(
                 it.toRoute<Page.FileInfo>().downloadId,
                 onShouldGoBack = onCloseFileInfoPage

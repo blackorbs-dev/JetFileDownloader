@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -97,7 +98,13 @@ fun MainLayout(
     Column(
         Modifier.fillMaxSize()
             .background(
-                color = MaterialTheme.colorScheme.surface
+                brush = Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.background
+                    ),
+                    startY = 500f
+                ),
             ).padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
