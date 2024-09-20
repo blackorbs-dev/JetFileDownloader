@@ -14,6 +14,9 @@ interface DownloadDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun add(download: Download): Long
 
+    @Query("SELECT * FROM downloads WHERE id = :id")
+    suspend fun get(id: Long): Download
+
     @Query("UPDATE downloads SET currentSize = :size WHERE id = :id")
     suspend fun update(size: Long, id: Long)
 
@@ -21,9 +24,7 @@ interface DownloadDao {
     suspend fun update(status: MutableState<Status>, id: Long)
 
     @Query("SELECT * FROM downloads ORDER BY datetime(dateTime) DESC LIMIT :limit OFFSET :offsetIndex")
-    suspend fun getAll(offsetIndex: Long, limit: Int = 10): List<Download>
-//    @Query("SELECT * FROM downloads ORDER BY datetime(dateTime) DESC")
-//    fun getAll(): PagingSource<Int, Download>
+    suspend fun getAll(offsetIndex: Long, limit: Int = 20): List<Download>
 
     @Delete
     suspend fun delete(download: Download)

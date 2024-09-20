@@ -1,5 +1,6 @@
 package blackorbs.dev.jetfiledownloader.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -8,42 +9,50 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Blue60,
-    secondary = Pink80,
-    tertiary = Purple40,
-    onPrimary = White80,
-    onSecondary = PurpleGrey80,
-    onTertiary = PurpleGrey80
+    primary = Purple80,
+    secondary = DeepPurple,
+    tertiary = PurpleGrey80,
+    onPrimary = DeepPurple,
+    onSecondary = PurpleGrey40,
+    onSecondaryContainer = White80,
+    onTertiary = PurpleGrey80,
+    primaryContainer = Purple80,
+    onPrimaryContainer = PurpleGrey80,
+    outline = Purple80,
+    outlineVariant = PurpleGrey40,
+    surface = DeepPurple,
+    onSurface = PurpleGrey80,
+    background = PurpleGrey40,
+    onBackground = PurpleGrey80,
+    surfaceDim = DeepPurpleDim,
+    error = Orange40
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Blue90,
-    secondary = Pink,
-    tertiary = Blue60,
-    onPrimary = White,
-    onSecondary = Purple80,
+    primary = DeepBlue,
+    secondary = DeepBlue,
+    tertiary = Purple40,
+    onPrimary = Purple10,
+    onSecondary = Purple10,
     onTertiary = White80,
-    primaryContainer = Purple40,
+    primaryContainer = Pink40,
     onPrimaryContainer = PurpleGrey40,
-    outline = Blue90,
-    outlineVariant = Blue60,
-    surface = Purple10,
-    onSurface = PurpleGrey40,
-    background = White,
-    onBackground = Blue90
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    outline = DeepBlue,
+    outlineVariant = Purple40,
+    surface = Pink80,
+    onSurface = DeepBlue,
+    background = Purple10,
+    onBackground = DeepBlue,
+    surfaceDim = DeepBlueDim,
+    error = Pink
 )
 
 @Composable
@@ -61,9 +70,22 @@ fun JetTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
+    }
+
+    val customColors = if(darkTheme) DarkCustomColors else CustomColors()
+
+    CompositionLocalProvider(LocalCustomColors provides customColors) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

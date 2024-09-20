@@ -12,89 +12,95 @@ import blackorbs.dev.jetfiledownloader.R
 import blackorbs.dev.jetfiledownloader.entities.ActionType
 import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Status
-import blackorbs.dev.jetfiledownloader.ui.MainServiceHolder
-import blackorbs.dev.jetfiledownloader.ui.download.DownloadVm
+import blackorbs.dev.jetfiledownloader.ui.download.DownloadVM
+import blackorbs.dev.jetfiledownloader.ui.startActivityWithChooser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.io.File
+import java.net.URI
 import java.time.LocalDateTime
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class DownloadManager(
     private val context: Context,
     private val scope: CoroutineScope,
     private val downloadFolder: File,
-    private val mainServiceHolder: MainServiceHolder,
-    private val downloadVm: DownloadVm,
+    private val downloadVm: DownloadVM,
     private val showDialog: MutableState<Boolean>,
-    private val onMessage: (Int) -> Unit
+    private val showError: MutableState<Boolean>
 ) {
-    val permissionManager = PermissionManager(
-        context = context, onNotifPermission = this::onNotifPermission,
-        executePending = this::executePending, onMessage = onMessage
-    )
-    private val app = context.applicationContext as MainApp
-    private val pendingDownloads = mutableListOf<Download>()
-
-    private lateinit var download: Download
-    private lateinit var tempFileName: String
+    lateinit var permissionManager: PermissionManager
+    private var downloadService: DownloadService? = null
+    private val serviceConnection: ServiceConnection
+    private val app = (context.applicationContext as MainApp)
+        .apply { newDownloadsCount.intValue = 0 }
+    private val pendingDownloads = ConcurrentLinkedQueue<Download>()
+    private var isRunning = false
 
     fun execute(
-        url: String, @Suppress("UNUSED_PARAMETER") userAgent: String,
+        url: String, @Suppress("Unused_Parameter") userAgent: String,
         contentDisposition: String, mimeType: String, contentLength: Long
     ){
-        download = Download(
-            url = url,
-            fileName = URLUtil.guessFileName(url, contentDisposition, mimeType),
-            totalSize = contentLength
-        )
+        pendingDownloads.add( Download(
+            url = url, totalSize = contentLength,
+            fileName = getFileName(url, contentDisposition, mimeType)
+        ) )
         executePending()
     }
 
-    fun execute(downloadUpdate: Download){
-        if(downloadUpdate.actionType == ActionType.None){
-            if(downloadUpdate.status.value == Status.Success){
-                context.startActivity(
-                    Notifier.getFileIntent(context, downloadUpdate.filePath)
+    fun execute(download: Download){
+        if(download.isSelected.value) return
+        if(download.actionType == ActionType.None){
+            if(download.status.value == Status.Success){
+                context.startActivityWithChooser(
+                    Notifier.getFileIntent(context, download.filePath),
+                    R.string.open_file_using
                 )
             }
             return
         }
-        download = downloadUpdate
+        pendingDownloads.add(download)
         executePending()
     }
 
-    private fun executePending(){
+    fun executePending(){
         if(permissionManager.storagePermissionRequired()){
             permissionManager.launchRequest(PermissionManager.Type.Storage)
         }
+        else if(downloadService == null){ startDownloadService() }
         else {
             if(downloadFolder.exists() || downloadFolder.mkdirs()){
-                if(download.actionType == ActionType.Resume
-                    || download.actionType == ActionType.Pause)
-                {
-                    continueDownload(download); return
-                }
-                download.filePath = "${downloadFolder}/${download.fileName}"
+                if(isRunning) return; isRunning = true
                 scope.launch {
-                    tempFileName = download.fileName
-                    var num = 0
-                    val type = download.fileName.substring(fileName.lastIndexOf('.'))
-                    val name = download.fileName.replace(type, "")
-                    while(File(download.filePath).exists()){
-                        download.fileName = "$name(${++num})$type"
+                    for(download: Download in pendingDownloads){
+                        if(download.actionType == ActionType.Resume
+                            || download.actionType == ActionType.Pause)
+                        {
+                            continueDownload(download); continue
+                        }
                         download.filePath = "${downloadFolder}/${download.fileName}"
+                        download.errorIndex =
+                            app.errorDownloads.indexOfFirst { it.fileName == download.fileName }
+                        var num = 0
+                        val type = ".${download.type}"
+                        val name = download.fileName.replace(type, "")
+                        while(File(download.filePath).exists()){
+                            download.fileName = "$name(${++num})$type"
+                            download.filePath = "${downloadFolder}/${download.fileName}"
+                        }
+                        if(num > 0){
+                            if(showDialog.value) showError.value = true
+                            else showDialog.value = true; break
+                        }
+                        else showDialog.value = false
+                        var newDownload = download
+                        newDownload.dateTime = LocalDateTime.now()
+                        newDownload = downloadVm.add(newDownload)
+                        app.newDownloadsCount.intValue++
+                        continueDownload(newDownload)
                     }
-                    if(num > 0){
-                        if(showDialog.value) onMessage(R.string.file_still_exist)
-                        else showDialog.value = true
-                        return@launch
-                    }
-                    else showDialog.value = false
-                    download.dateTime = LocalDateTime.now()
-                    download = downloadVm.add(download)
-                    app.addNum++
-                    continueDownload(download)
+                    isRunning = false
                 }
             }
             else{
@@ -106,65 +112,76 @@ class DownloadManager(
     private fun continueDownload(download: Download){
         if(permissionManager.permissionNum == 0)
             permissionManager.showNotifPermission()
-        if(mainServiceHolder.downloadService == null){
-            Timber.d("Download Service is disconnected")
-            pendingDownloads.add(download)
-            startDownloadService()
-        }
-        else{
-            mainServiceHolder.downloadService!!.executeTask(download)
-        }
+        downloadService!!.executeTask(download)
+        pendingDownloads.poll()
     }
+
+    fun onSelectedAction(actionType: ActionType) = when(actionType){
+        ActionType.Delete -> downloadVm.deleteSelectedItems()
+        ActionType.Share -> downloadVm.shareSelection(context)
+        else -> {}
+    }
+
+    val selectedItemCount get() = downloadVm.selectedItemCount.value
+    val isPendingDelete get() = downloadVm.isPendingDelete
 
     fun handleFileRename(input: String){
-        if(input.isEmpty()){ // resume failed download
-            download = app.errorDownloads[
-                app.errorDownloads.indexOfFirst {
-                    it.fileName == tempFileName
+        var download = pendingDownloads.peek()
+        if(download != null){
+            if(input.isEmpty()){
+                if(download.errorIndex != -1){ // resume failed download
+                    download = app.errorDownloads[download.errorIndex]
+                        .apply {
+                            url = download!!.url
+                            actionType = ActionType.Resume
+                        }
                 }
-            ].apply { url = download.url; actionType = ActionType.Resume }
-            showDialog.value = false
-        }
-        else{
-            val type = download.fileName.substring(download.fileName.lastIndexOf('.'))
-            download.fileName = input
-            if(!input.endsWith(type)){
-                download.fileName += type
+                else{
+                    pendingDownloads.poll()
+                }
+                showDialog.value = false
             }
+            else{
+                val type = ".${download.type}"
+                download.fileName = input
+                if(!input.endsWith(type)){
+                    download.fileName += type
+                }
+            }
+            executePending()
         }
-        executePending()
     }
 
-    val fileName get() = download.fileName
+    val fileName get() = pendingDownloads.peek()?.fileName?:""
 
-    val isFailedDownload get() = app.errorDownloads.any { it.fileName == tempFileName }
+    val isFailedDownload get() = pendingDownloads.peek()?.errorIndex != -1
+
+    private fun getFileName(url: String, contentDisposition: String, mimeType: String): String {
+        var fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
+        if(fileName.endsWith(".bin")){
+            URI(url).path?.let {File(it).name}?.run {
+                if(isNotEmpty()) fileName = this
+            }
+        }
+        if(fileName.endsWith(".bin") && contentDisposition.contains("filename"))
+            fileName = contentDisposition.replaceFirst(
+                "(?i)^.*filename=\"?([^\"]+)\"?.*$".toRegex(), "$1"
+            )
+        return fileName
+    }
 
     init {
-        mainServiceHolder.connection = object : ServiceConnection {
+        serviceConnection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 Timber.i("Service connection started...")
-                mainServiceHolder.downloadService = (service as DownloadService.ServiceBinder).service
-                mainServiceHolder.downloadService!!.sizeUpdater = downloadVm::update
-                mainServiceHolder.downloadService!!.statusUpdater = { downloadItem ->
-                    scope.launch {
-                        if(downloadItem.status.value == Status.Error){
-                            app.errorDownloads.add(downloadItem)
-                        }
-                        else{
-                            app.errorDownloads.removeIf { it.id == downloadItem.id }
-                        }
-                    }
-                    downloadVm.update(downloadItem.status, downloadItem.id)
-                }
-                app.ongoingDownloads.addAll(mainServiceHolder.downloadService!!.ongoingDownloads)
-                pendingDownloads.forEach {
-                    mainServiceHolder.downloadService!!.executeTask(it)
-                }
-                pendingDownloads.clear()
+                downloadService = (service as DownloadService.ServiceBinder).service
+                downloadService?.serviceDisconnector =
+                    this@DownloadManager::disconnectService
+                executePending()
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
-                mainServiceHolder.downloadService = null
+                downloadService = null
             }
         }
         if(DownloadService.isRunning) startDownloadService()
@@ -173,14 +190,22 @@ class DownloadManager(
     private fun startDownloadService(){
         Intent(context, DownloadService::class.java).also { intent ->
             context.startForegroundService(intent)
-            context.bindService(intent, mainServiceHolder.connection!!, Context.BIND_AUTO_CREATE)
+            context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
         }
     }
 
-    private fun onNotifPermission(granted: Boolean){
+    fun disconnectService(){
+        downloadService?.let {
+            Timber.d("Disconnecting from Service")
+            context.unbindService(serviceConnection)
+        }
+    }
+
+    fun onNotifPermission(granted: Boolean){
         if(granted){
-            mainServiceHolder.downloadService?.notifier
+            downloadService?.notifier
                 ?.showAllPendingNotifications()
+            downloadVm.showNotifBox.value = false
         }
         else{
             downloadVm.showNotifBox.value =

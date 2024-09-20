@@ -10,18 +10,17 @@ import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Status
 import kotlinx.coroutines.flow.Flow
 
-class DownloadRepo(private val app: Application?) : BaseDownloadRepo {
-    private val dao = (app as MainApp).database.downloadDao()
+class DownloadRepository(private val app: Application?) : BaseDownloadRepository {
+    private val dao = (app as MainApp).downloadDao
 
-    override fun getAll(): Flow<PagingData<Download>> =
-        Pager(
-            config = PagingConfig(
-                pageSize = 20, enablePlaceholders = false
-            ),
-            pagingSourceFactory = { DownloadsPagingSource(app) }
-        ).flow
+    override fun getAll() = Pager(
+        config = PagingConfig(pageSize = 20),
+        pagingSourceFactory = { DownloadsPagingSource(app) }
+    ).flow
 
     override suspend fun add(download: Download) = dao.add(download)
+
+    override suspend fun get(id: Long): Download = dao.get(id)
 
     override suspend fun update(size: Long, id: Long) = dao.update(size, id)
 
@@ -30,10 +29,12 @@ class DownloadRepo(private val app: Application?) : BaseDownloadRepo {
     override suspend fun delete(download: Download) = dao.delete(download)
 }
 
-interface BaseDownloadRepo {
+interface BaseDownloadRepository {
     fun getAll(): Flow<PagingData<Download>>
 
     suspend fun add(download: Download): Long
+
+    suspend fun get(id: Long): Download
 
     suspend fun update(size: Long, id: Long)
 

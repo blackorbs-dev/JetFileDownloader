@@ -8,8 +8,9 @@ import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Favorite
 
 @Database(
-    entities = [Download::class, Favorite::class],
-    version = 1, exportSchema = false,
+    entities =
+    [Download::class, Favorite::class],
+    version = 2,
 )
 @TypeConverters(Converter::class)
 abstract class Database: RoomDatabase() {

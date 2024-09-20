@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.compose.compiler)
 }
@@ -19,6 +20,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        ksp {
+            arg("room.schemaLocation", "$projectDir/schemas")
         }
     }
 
@@ -63,8 +68,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.navigation.compose)
     implementation (libs.accompanist.permissions)
+    implementation(libs.androidx.webkit)
     implementation(libs.okhttp)
     implementation (libs.timber)
+    implementation(libs.kotlinx.serialization.json)
 
     //Room
     implementation(libs.androidx.room.runtime)

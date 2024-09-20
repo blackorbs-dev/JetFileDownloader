@@ -20,11 +20,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.JetFileDownloader"
+        android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
             android:name=".ui.MainActivity"
-            android:exported="true"
-            android:theme="@style/Theme.JetFileDownloader">
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -35,7 +35,7 @@
             android:foregroundServiceType="dataSync"
             android:exported="false"/>
         <provider
-            android:name=".services.JetFileProvider"
+            android:name=".ui.JetFileProvider"
             android:authorities="${applicationId}.provider"
             android:exported="false" android:grantUriPermissions="true">
             <meta-data

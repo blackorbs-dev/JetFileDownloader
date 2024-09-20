@@ -6,34 +6,36 @@ import androidx.paging.PagingState
 import blackorbs.dev.jetfiledownloader.MainApp
 import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Status
+import java.io.File
 
 class DownloadsPagingSource(app: Application?): PagingSource<Int, Download>() {
     private val limit = 20
     private val mainApp = app as MainApp
-    private val dao = mainApp.database.downloadDao()
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Download> {
         val page = params.key ?: 0
-        val downloads = dao.getAll(
-            page.toLong()*limit+mainApp.addNum,
+        val downloads = mainApp.downloadDao.getAll(
+            page.toLong()*limit+mainApp.newDownloadsCount.intValue,
             limit = limit
         ).map { download ->
-//            Timber.e(
-//                "Ongoing download not found!. " +
-//                        "Possible reason: Download Service is not " +
-//                        "yet connected on app start"
-//            )
-//            return LoadResult.Error(ServiceConnException())
             if(download.status.value == Status.Error){
                 mainApp.errorDownloads.add(download)
             }
-            val index = mainApp.ongoingDownloads.indexOfFirst {
+            mainApp.ongoingDownloads.indexOfFirst {
                 item -> item.id == download.id
+            }.run {
+                if(this != -1){
+                    return@map mainApp.ongoingDownloads[this]
+                }
             }
-            if(index != -1){
-                return@map mainApp.ongoingDownloads[index]
+            when{
+                download.currentSize > 0 && !File(download.filePath).exists() ->
+                    download.status.value = Status.Deleted
+                download.status.value == Status.Queued
+                        || download.status.value == Status.Ongoing ->
+                    download.status.value = Status.Paused
             }
-            download
+            download.apply { publishProgress() }
         }
 
         return LoadResult.Page( downloads, null,
@@ -47,5 +49,3 @@ class DownloadsPagingSource(app: Application?): PagingSource<Int, Download>() {
              anchorPage?.prevKey?.plus(1) ?: anchorPage?.nextKey?.minus(1)
         }
 }
-
-class ServiceConnException: Exception()

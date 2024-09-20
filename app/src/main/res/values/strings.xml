@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">JetFileDownloader</string>
     <string name="home">Home</string>
     <string name="download">Downloads</string>
@@ -11,14 +11,15 @@
     <string name="notif_channel_title">Downloads Notification</string>
     <string name="notif_channel_desc">Allows you to monitor and interact with your ongoing downloads</string>
     <string name="service_started">Download service is running</string>
-    <string name="stop_service">STOP SERVICE</string>
+    <string name="stop_service">Stop Service</string>
+    <string name="download_started">%1$s download started</string>
     <string name="download_success">%1$s successfully downloaded</string>
     <string name="download_error">%1$s download failed!:: %2$s</string>
     <string name="permission_denied">Required permission denied!</string>
     <string name="queued">Queued</string>
     <string name="ongoing">Ongoing…</string>
     <string name="paused">Paused</string>
-    <string name="success">Success</string>
+    <string name="success">Completed</string>
     <string name="error">Error</string>
     <string name="deleted">Deleted</string>
     <string name="permission_message">To monitor your files downloading progress and interact with them from your notification panel, you need to allow this app to show notification.</string>
@@ -28,6 +29,41 @@
     <string name="yesterday">Yesterday</string>
     <string name="file_exist_title">File Exists Already</string>
     <string name="resume_download">Resume failed download</string>
-    <string name="rename_download">Rename download</string>
-    <string name="file_still_exist">File exist! Please try again</string>
+    <string name="continue_download">Continue download</string>
+    <string name="file_still_exist">File exists! Please try again</string>
+    <string name="load_using">Load using…</string>
+    <string name="new_filename_label">New filename</string>
+    <string name="cancel">Cancel</string>
+    <string name="stop_ongoing_task">You need to stop all ongoing tasks to disconnect from this service</string>
+    <string name="open_file_using">Open file using…</string>
+    <string name="stop_all_tasks">Stop all Active Downloads</string>
+    <string name="pause">PAUSE</string>
+    <string name="resume">RESUME</string>
+    <string name="open">Open</string>
+    <string name="tap_to_open">Tap to open</string>
+    <string name="loading_failed">Loading failed!</string>
+    <string name="downloaded_files">downloaded files</string>
+    <string name="favorite_websites">favorite websites</string>
+    <string name="empty_list_info">Your %1$s will appear here</string>
+    <string name="no_more_items">No more items</string>
+    <string name="delete">Delete</string>
+    <string name="save">Save</string>
+    <string name="edit_favorite_dialog_title">Edit Favorite</string>
+    <string name="title">Title</string>
+    <string name="url">Url</string>
+    <string name="fav_added">Added to favorites</string>
+    <string name="share">Share</string>
+    <string name="info">Info</string>
+    <string name="selected" tools:override="true">Selected</string>
+    <string name="file_deleted">File deleted!</string>
+    <string name="undo">UNDO</string>
+    <string name="cant_share">Couldn\'t share file</string>
+    <string name="file_share_tag">Files downloaded with JetFileDownloader</string>
+    <string name="go_back">Go back</string>
+    <string name="status">Status</string>
+    <string name="date">Date</string>
+    <string name="file_size">File size</string>
+    <string name="formated_size">%1$s of </string>
+    <string name="details">File Info</string>
+    <string name="download_not_completed">Download not completed yet!</string>
 </resources>

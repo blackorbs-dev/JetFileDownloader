@@ -11,10 +11,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.content.FileProvider.getUriForFile
@@ -31,6 +33,7 @@ class Notifier(private val context: Context) {
     private val pendingNotifications: MutableMap<Int, Notification>
     val summaryNotif: Notification
     val notifType: Int
+    private var notifRandomID = 2 // ID for Downloads notification, Starts at 2: Summary notif can be 0 or 1
 
     val handler: Handler
 
@@ -50,9 +53,7 @@ class Notifier(private val context: Context) {
     }
 
     fun showAllPendingNotifications(){
-        pendingNotifications.forEach { (id, notif) ->
-            showNotification(id, notif)
-        }
+        pendingNotifications.forEach(this::showNotification)
     }
 
     fun showUpdate(fileName: String, status: Status){
@@ -62,10 +63,19 @@ class Notifier(private val context: Context) {
             showToast(context.getString(R.string.download_error, fileName, status.text))
     }
 
-    private fun showToast(message: String) {
+    fun showToast(message: String) {
         handler.post {
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
         }
+    }
+
+    fun showNotification(download: Download, notifBuilder: NotificationCompat.Builder){
+        showNotification(
+            download.apply {
+                if(notifID == -1) notifID = notifRandomID++
+            }.notifID,
+            notifBuilder.build()
+        )
     }
 
     fun showNotification(id: Int, notification: Notification) {
@@ -76,6 +86,7 @@ class Notifier(private val context: Context) {
         }
         notifMan.notify(id, notification)
         pendingNotifications.remove(id)
+        notifMan.notify(SUMMARY_NOTIF_ID, summaryNotif)
     }
 
     fun getNotificationBuilder(download: Download) =
@@ -83,29 +94,40 @@ class Notifier(private val context: Context) {
             .setSmallIcon(R.drawable.ic_downloading_24)
             .setContentTitle(download.fileName)
             .setContentIntent(getMainIntent())
-            .setProgress(100, download.sizePercent, false)
             .setGroup(TAG).setSilent(true)
 
     private fun getSummaryNotification() = NotificationCompat.Builder(context, context.packageName)
-        .setSmallIcon(R.mipmap.ic_launcher)
-        .setContentTitle(context.getString(R.string.service_started))
-        .setContentIntent(getMainIntent()).setGroupSummary(true)
-        .setGroup(TAG).setSilent(true).addAction(
-            android.R.drawable.ic_menu_close_clear_cancel,
-            context.getString(R.string.stop_service), stopServiceIntent()
-        ).build()
+        .apply {
+            setSmallIcon(R.mipmap.ic_launcher)
+            setContentTitle(context.getString(R.string.service_started))
+            setContentIntent(getMainIntent())
+            setGroupSummary(true)
+            setGroup(TAG)
+            setSilent(true)
+            addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                context.getString(R.string.stop_service),
+                actionIntent(R.string.stop_service)
+            )
+            addAction(
+                android.R.drawable.ic_notification_clear_all,
+                context.getString(R.string.stop_all_tasks),
+                actionIntent(R.string.stop_all_tasks)
+            )
+        }.build()
 
     private fun getMainIntent() = PendingIntent.getActivity(context, 0,
-        Intent(context, MainActivity::class.java
-        ).putExtra(MAIN_KEY, 419),
+        Intent(context, MainActivity::class.java).putExtra(MAIN_KEY, 419),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    private fun stopServiceIntent() = PendingIntent.getForegroundService(context, 0,
-        Intent(context, DownloadService::class.java
-        ).setAction(context.getString(R.string.stop_service)),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
+    fun actionIntent(@StringRes actionResID: Int, id: Long = -1): PendingIntent =
+        PendingIntent.getForegroundService(context, 0,
+            Intent(context, DownloadService::class.java
+            ).setAction(context.getString(actionResID))
+                .putExtra(context.getString(actionResID), id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
     fun getPendingFileIntent(filepath: String): PendingIntent {
         return PendingIntent.getActivity(context, 0, getFileIntent(context, filepath),
@@ -122,15 +144,28 @@ class Notifier(private val context: Context) {
         const val TAG = "JetDownloadService"
         const val MAIN_KEY = "MainKey"
 
-        fun getFileIntent(context: Context, filepath: String) = Intent(Intent.ACTION_VIEW).apply {
-            if (filepath.endsWith(".apk"))
-                setDataAndType(getUriForFile(
+        fun getFileIntent(context: Context, filepath: String): Intent =
+            Intent(Intent.ACTION_VIEW).apply {
+                if (filepath.endsWith(".apk"))
+                    setDataAndType(getUriForFile(
+                        context, "${context.packageName}.provider", File(filepath)
+                    ), "application/vnd.android.package-archive")
+                else setData(getUriForFile(
                     context, "${context.packageName}.provider", File(filepath)
-                ), "application/vnd.android.package-archive")
-            else setData(getUriForFile(
-                context, "${context.packageName}.provider", File(filepath)
-            ))
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                ))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+        fun getFileUri(context: Context, filepath: String): Uri? {
+            with(File(filepath)){
+                if(exists()){
+                    return getUriForFile(context,
+                        "${context.packageName}.provider",
+                        this
+                    )
+                }
+            }
+            return null
         }
     }
 }

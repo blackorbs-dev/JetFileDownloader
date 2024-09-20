@@ -6,11 +6,20 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import blackorbs.dev.jetfiledownloader.MainApp
 import blackorbs.dev.jetfiledownloader.R
 import blackorbs.dev.jetfiledownloader.entities.ActionType
 import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Status
+import blackorbs.dev.jetfiledownloader.entities.formatAsFileSize
 import blackorbs.dev.jetfiledownloader.services.Notifier.Companion.SUMMARY_NOTIF_ID
+import blackorbs.dev.jetfiledownloader.ui.addIfAbsent
+import blackorbs.dev.jetfiledownloader.ui.getById
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Dispatcher
@@ -29,14 +38,19 @@ import java.util.concurrent.TimeUnit
 
 class DownloadService: Service() {
     private val binder = ServiceBinder()
+    private lateinit var app: MainApp
+    private val scope = CoroutineScope(
+        Dispatchers.IO + SupervisorJob()
+    )
 
     private lateinit var downloadClient: OkHttpClient
     lateinit var notifier: Notifier
-    private val _ongoingDownloads = mutableListOf<Download>()
-    val ongoingDownloads: List<Download> = _ongoingDownloads
+
+    private val stoppedDownloads = mutableListOf<Download>()
 
     override fun onCreate() {
         super.onCreate()
+        app = application as MainApp
 
         val dispatcher = Dispatcher().apply {
             maxRequests = 30
@@ -57,46 +71,42 @@ class DownloadService: Service() {
         )
         notifier.showNotification(SUMMARY_NOTIF_ID, notifier.summaryNotif)
 
-        if(intent != null && intent.action != null &&
-            intent.action == getString(R.string.stop_service)) {
-            stopSelf()
+        if(intent != null && intent.action != null) {
+            scope.launch { handleNotifAction(intent) }
         }
         return START_STICKY
     }
 
     fun executeTask(download: Download){
         if(download.actionType == ActionType.Pause){
-            download.status.value = Status.Paused
-            statusUpdater?.invoke(download)
-            cancel(download.fileName)
-            _ongoingDownloads.removeIf{item -> item.id == download.id}
+            updateStatus(download.apply { status.value = Status.Paused })
             return
         }
-        val notifBuilder: NotificationCompat.Builder = notifier.getNotificationBuilder(download)
-        notifier.showNotification(download.id.toInt(), notifBuilder.build())
+        updateStatus(download.apply { status.value = Status.Queued })
         val requestBuilder = Request.Builder()
-        if(download.currentSize.longValue > 0){
+        val file = File(download.filePath)
+        if(file.length() > 0){
             requestBuilder.addHeader(
-                "Range", "bytes=${download.currentSize.longValue}-"
+                "Range", "bytes=${file.length()}-"
             )
-            download.status.value = Status.Queued
-            statusUpdater?.invoke(download)
         }
-        _ongoingDownloads.add(download)
+        else notifier.showToast(getString(R.string.download_started, download.fileName))
         downloadClient.newCall(
             requestBuilder.url(download.url).tag(download.fileName).build()
         ).enqueue(object : Callback{
-
             override fun onResponse(call: Call, response: Response) {
                 if(response.isSuccessful && response.body != null){
-                    download.status.value = Status.Ongoing
-                    statusUpdater?.invoke(download)
+                    updateStatus(download.apply { status.value = Status.Ongoing })
+                    if(download.totalSize <= 0L){
+                        download.totalSize =
+                            download.currentSize+response.body!!.contentLength()
+                    }
+                    val notifBuilder: NotificationCompat.Builder = notifier.getNotificationBuilder(download)
                     var sink: BufferedSink? = null; var source: BufferedSource? = null
                     try {
                         source = response.body!!.source()
-                        val file = File(download.filePath)
-                        sink = (if(file.exists()) file.appendingSink() else file.sink())
-                                .buffer()
+                        sink = (if(file.exists() && response.body!!.contentLength() < download.totalSize)
+                                file.appendingSink() else file.sink()).buffer()
                         val bufferSize: Long = 8*1024
                         var bytesRead: Long
                         var updateTime = 0L
@@ -104,56 +114,117 @@ class DownloadService: Service() {
                         while(source.read(sink.buffer, bufferSize)
                                 .also { bytesRead = it } != -1L
                         ) {
-                            sink.emit(); download.currentSize.longValue += bytesRead
+                            sink.emit(); download.currentSize += bytesRead
                             if(System.currentTimeMillis() - updateTime > 1000){
-                                notifBuilder.setProgress(100, download.sizePercent, false)
-                                notifier.showNotification(download.id.toInt(), notifBuilder.build())
+                                updateSize(download.apply { publishProgress() }, notifBuilder)
                                 updateTime = System.currentTimeMillis()
                             }
                         }
-                        download.status.value = Status.Success
-                        statusUpdater?.invoke(download)
-                        notifier.showUpdate(download.fileName, Status.Success)
-                        _ongoingDownloads.removeIf{item -> item.id == download.id}
-                        notifBuilder.setProgress(100, 100, false)
-                        notifBuilder.setContentIntent(notifier.getPendingFileIntent(download.filePath))
-                        notifier.showNotification(download.id.toInt(), notifBuilder.build())
-
+                        updateStatus(download.apply { status.value = Status.Success })
                         Timber.i("${download.fileName} successfully downloaded and saved to storage.")
                     }
                     catch (e: IOException){
-                        handleError(download, e.localizedMessage?:e.message?:e.toString())
+                        handleError(
+                            download, e.localizedMessage?:e.message?:e.toString()
+                        )
                     }
                     finally {
                         sink?.flush(); sink?.close(); source?.close()
-                        sizeUpdater?.invoke(download.currentSize.longValue, download.id)
                     }
                 }
                 else{
-                    Timber.e("Body: ${response.body} ---- Code: ${response.code}")
-                    handleError(download, getString(R.string.error_message))
+                    Timber.e("Body: ${response.body}\nCode: ${response.code}")
+                    handleError(
+                        download, getString(R.string.error_message)
+                    )
                 }
             }
 
             override fun onFailure(call: Call, e: IOException) =
-                handleError(download, e.localizedMessage?:e.message?:e.toString())
+                handleError(
+                    download, e.localizedMessage?:e.message?:e.toString()
+                )
         })
     }
 
-    private fun handleError(download: Download, errorMsg: String) {
+    private fun updateSize(download: Download, notifBuilder: NotificationCompat.Builder){
+        scope.launch {
+            app.downloadDao.update(download.currentSize, download.id)
+        }
+        with(notifBuilder){
+            clearActions()
+            addAction(
+                android.R.drawable.ic_media_pause,
+                getString(R.string.pause),
+                notifier.actionIntent(R.string.pause, download.id)
+            )
+            setContentText(getStatusText(download))
+            setProgress(100, download.sizePercent.intValue, false)
+            notifier.showNotification(download, this)
+        }
+    }
+
+    private fun updateStatus(download: Download){
+        val notifBuilder = notifier.getNotificationBuilder(download)
+        if(download.isNotCompleted){
+            if(download.isPending){ // Queued/Ongoing
+                if(download.status.value == Status.Queued){
+                    app.ongoingDownloads.addIfAbsent(download)
+                    app.errorDownloads.remove(download)
+                    stoppedDownloads.remove(download)
+                }
+                notifBuilder.addAction(
+                    android.R.drawable.ic_media_pause,
+                    getString(R.string.pause),
+                    notifier.actionIntent(R.string.pause, download.id)
+                )
+            }
+            else{ // Paused/Error
+                if(download.status.value == Status.Paused)
+                    cancel(download.fileName)
+                else app.errorDownloads.addIfAbsent(download)
+                stoppedDownloads.addIfAbsent(download)
+                app.ongoingDownloads.remove(download)
+                notifBuilder.addAction(
+                    android.R.drawable.ic_media_play,
+                    getString(R.string.resume),
+                    notifier.actionIntent(R.string.resume, download.id)
+                )
+            }
+            notifBuilder.setProgress(100, download.sizePercent.intValue, false)
+        }
+        else { // Success
+            app.ongoingDownloads.remove(download)
+            notifBuilder.apply {
+                setContentIntent(notifier.getPendingFileIntent(download.filePath))
+                setProgress(0, 0, false)
+                setAutoCancel(true)
+            }
+        }
+        scope.launch {
+            app.downloadDao.update(download.status, download.id)
+        }
+        notifier.showUpdate(download.fileName, download.status.value)
+        notifBuilder.setContentText(getStatusText(download))
+        notifier.showNotification(download, notifBuilder)
+    }
+
+    private fun getStatusText(download: Download) =
+        "${getString(download.status.value.titleResID)} (${
+            if(download.status.value == Status.Success) getString(R.string.tap_to_open)
+            else "${download.currentSize.formatAsFileSize(this)}/" +
+                    download.totalSize.formatAsFileSize(this)
+        })"
+
+    private fun handleError(
+        download: Download, errorMsg: String
+    ) {
         if(download.status.value == Status.Paused || download.status.value == Status.Success
             || download.status.value == Status.Error
         ) return
-        download.status.value = Status.Error.apply { text = errorMsg }
-        statusUpdater?.invoke(download)
-        notifier.showUpdate(download.fileName, download.status.value)
-        _ongoingDownloads.removeIf{item -> item.id == download.id}
+        updateStatus(download.apply { status.value = Status.Error.apply { text = errorMsg }})
         Timber.e("${download.fileName} Download Error:: $errorMsg")
     }
-
-    var statusUpdater: ((download: Download) -> Unit)? = null
-
-    var sizeUpdater: ((size: Long, id: Long) -> Unit)? = null
 
     private fun cancel(fileName: String) {
         for(call in downloadClient.dispatcher.queuedCalls()) {
@@ -163,6 +234,36 @@ class DownloadService: Service() {
             if(fileName == call.request().tag()) call.cancel()
         }
     }
+
+    private fun handleNotifAction(intent: Intent) {
+        when(intent.action){
+            getString(R.string.stop_service) -> {
+                if(app.ongoingDownloads.isEmpty()){
+                    serviceDisconnector?.invoke()
+                    stopSelf()
+                }
+                else{
+                    notifier.showToast(getString(R.string.stop_ongoing_task))
+                }
+            }
+            getString(R.string.stop_ongoing_task) -> app.ongoingDownloads.forEach {
+                executeTask(it.apply { actionType = ActionType.Pause })
+            }
+            getString(R.string.pause) -> app.ongoingDownloads.getById(
+                intent.getLongExtra(getString(R.string.pause), -1)
+            )?.let {
+                executeTask(it.apply { actionType = ActionType.Pause })
+            }
+            getString(R.string.resume) -> stoppedDownloads.getById(
+                intent.getLongExtra(getString(R.string.resume), -1)
+            )?.let {
+                executeTask(it.apply { actionType = ActionType.Resume })
+            }
+            else -> {}
+        }
+    }
+
+    var serviceDisconnector: (() -> Unit)? = null
 
     override fun onBind(intent: Intent?): IBinder = binder
 
@@ -186,6 +287,7 @@ class DownloadService: Service() {
 
     override fun onDestroy() {
         holder = null
+        scope.cancel()
         notifier.handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
