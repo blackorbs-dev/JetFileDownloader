@@ -61,7 +61,7 @@ jobs:
       - name: Instrumented Tests Run
         uses: ReactiveCircus/android-emulator-runner@v2.32.0
         with:
-          api-level: 30
+          api-level: 29
           script: ./gradlew connectedDebugAndroidTest
       - name: Instrumented Tests Results
         uses: actions/upload-artifact@v4
