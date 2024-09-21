@@ -28,3 +28,7 @@ jobs:
         with:
           name: JetFileDownloader.apk
           path: app/build/outputs/apk/app-debug-1.apk
+
+      - name: Publish CTRF Test Summary Results
+        run: npx github-actions-ctrf summary path-to-your-ctrf-report.json
+        if: always()
