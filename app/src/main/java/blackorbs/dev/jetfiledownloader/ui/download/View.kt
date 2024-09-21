@@ -726,13 +726,15 @@ fun DownloadPageItemsPreview(){
                 item {  NotifBox(onDismiss = { }) {
                 }}
                 item {
-                    DownloadItem(selectedItemCount = mutableIntStateOf(2), download = Download(
+                    DownloadItem(selectedItemCount = mutableIntStateOf(1), download = Download(
                         url = "", fileName = "Esnglish-textagsgsghsghsdgfhjhgddhgfhgd.pdf", totalSize = 1200L,
                         status = mutableStateOf(Status.Success.apply { text = "Some error occured" })
                     ).apply {
                         currentSize = 120
                         filePath = ""
                         dateTime = LocalDateTime.now()
+                        isSelected.value = true
+                        isPendingDelete.value = false
                     }
                     ) {}
                     DownloadItem(selectedItemCount = mutableIntStateOf(0), download = Download(

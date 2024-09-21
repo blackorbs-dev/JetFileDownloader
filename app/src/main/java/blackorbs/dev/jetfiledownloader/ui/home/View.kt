@@ -61,7 +61,10 @@ internal fun WebPage(
                 ErrorLay { webState.navigator.reload() }
             }
 
-            LinearProgressIndicator(progress = { webState.loadProgress }, Modifier.fillMaxWidth())
+            LinearProgressIndicator(
+                progress = { webState.loadProgress },
+                Modifier.fillMaxWidth()
+            )
             if (webState.loadProgress < 1) {
                 CircularProgressIndicator(Modifier.padding(top = 30.dp))
             }

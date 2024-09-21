@@ -127,29 +127,6 @@ fun ComposeWeb(
     })
 }
 
-@Suppress("Deprecation")
-fun WebSettings.setDarkMode(){
-    if(isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            isAlgorithmicDarkeningAllowed = true
-        else WebSettingsCompat
-            .setAlgorithmicDarkeningAllowed(this, true)
-    }
-    if(isFeatureSupported(WebViewFeature.FORCE_DARK)){
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-            forceDark = WebSettings.FORCE_DARK_ON
-        else WebSettingsCompat.setForceDark(
-                this, WebSettingsCompat.FORCE_DARK_ON
-        )
-    }
-    if(isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)){
-        WebSettingsCompat.setForceDarkStrategy(this,
-            WebSettingsCompat
-                .DARK_STRATEGY_PREFER_WEB_THEME_OVER_USER_AGENT_DARKENING
-        )
-    }
-}
-
 class WebStateSaver(
     private val scope: CoroutineScope,
     private val onNewWindow: (Message?) -> Unit,
@@ -363,5 +340,28 @@ open class WebClient(private val state: WebState) : WebViewClient(){
 
         state.navigator.canGoBack = view.canGoBack() || state.id != 0
         state.navigator.canGoForward = view.canGoForward()
+    }
+}
+
+@Suppress("Deprecation")
+fun WebSettings.setDarkMode(){
+    if(isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            isAlgorithmicDarkeningAllowed = true
+        else WebSettingsCompat
+            .setAlgorithmicDarkeningAllowed(this, true)
+    }
+    if(isFeatureSupported(WebViewFeature.FORCE_DARK)){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            forceDark = WebSettings.FORCE_DARK_ON
+        else WebSettingsCompat.setForceDark(
+            this, WebSettingsCompat.FORCE_DARK_ON
+        )
+    }
+    if(isFeatureSupported(WebViewFeature.FORCE_DARK_STRATEGY)){
+        WebSettingsCompat.setForceDarkStrategy(this,
+            WebSettingsCompat
+                .DARK_STRATEGY_PREFER_WEB_THEME_OVER_USER_AGENT_DARKENING
+        )
     }
 }
