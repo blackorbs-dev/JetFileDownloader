@@ -6,6 +6,7 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import blackorbs.dev.jetfiledownloader.BaseAppModule
 import blackorbs.dev.jetfiledownloader.MainApp
 import blackorbs.dev.jetfiledownloader.R
 import blackorbs.dev.jetfiledownloader.entities.ActionType
@@ -38,7 +39,7 @@ import java.util.concurrent.TimeUnit
 
 class DownloadService: Service() {
     private val binder = ServiceBinder()
-    private lateinit var app: MainApp
+    private lateinit var appModule: BaseAppModule
     private val scope = CoroutineScope(
         Dispatchers.IO + SupervisorJob()
     )
@@ -50,7 +51,7 @@ class DownloadService: Service() {
 
     override fun onCreate() {
         super.onCreate()
-        app = application as MainApp
+        appModule = (application as MainApp).appModule
 
         val dispatcher = Dispatcher().apply {
             maxRequests = 30
@@ -149,7 +150,7 @@ class DownloadService: Service() {
 
     private fun updateSize(download: Download, notifBuilder: NotificationCompat.Builder){
         scope.launch {
-            app.downloadDao.update(download.currentSize, download.id)
+            appModule.downloadDao.update(download.currentSize, download.id)
         }
         with(notifBuilder){
             clearActions()
@@ -169,8 +170,8 @@ class DownloadService: Service() {
         if(download.isNotCompleted){
             if(download.isPending){ // Queued/Ongoing
                 if(download.status.value == Status.Queued){
-                    app.ongoingDownloads.addIfAbsent(download)
-                    app.errorDownloads.remove(download)
+                    appModule.ongoingDownloads.addIfAbsent(download)
+                    appModule.errorDownloads.remove(download)
                     stoppedDownloads.remove(download)
                 }
                 notifBuilder.addAction(
@@ -182,9 +183,9 @@ class DownloadService: Service() {
             else{ // Paused/Error
                 if(download.status.value == Status.Paused)
                     cancel(download.fileName)
-                else app.errorDownloads.addIfAbsent(download)
+                else appModule.errorDownloads.addIfAbsent(download)
                 stoppedDownloads.addIfAbsent(download)
-                app.ongoingDownloads.remove(download)
+                appModule.ongoingDownloads.remove(download)
                 notifBuilder.addAction(
                     android.R.drawable.ic_media_play,
                     getString(R.string.resume),
@@ -194,7 +195,7 @@ class DownloadService: Service() {
             notifBuilder.setProgress(100, download.sizePercent.intValue, false)
         }
         else { // Success
-            app.ongoingDownloads.remove(download)
+            appModule.ongoingDownloads.remove(download)
             notifBuilder.apply {
                 setContentIntent(notifier.getPendingFileIntent(download.filePath))
                 setProgress(0, 0, false)
@@ -202,7 +203,7 @@ class DownloadService: Service() {
             }
         }
         scope.launch {
-            app.downloadDao.update(download.status, download.id)
+            appModule.downloadDao.update(download.status, download.id)
         }
         notifier.showUpdate(download.fileName, download.status.value)
         notifBuilder.setContentText(getStatusText(download))
@@ -238,7 +239,7 @@ class DownloadService: Service() {
     private fun handleNotifAction(intent: Intent) {
         when(intent.action){
             getString(R.string.stop_service) -> {
-                if(app.ongoingDownloads.isEmpty()){
+                if(appModule.ongoingDownloads.isEmpty()){
                     serviceDisconnector?.invoke()
                     stopSelf()
                 }
@@ -246,10 +247,10 @@ class DownloadService: Service() {
                     notifier.showToast(getString(R.string.stop_ongoing_task))
                 }
             }
-            getString(R.string.stop_ongoing_task) -> app.ongoingDownloads.forEach {
+            getString(R.string.stop_ongoing_task) -> appModule.ongoingDownloads.forEach {
                 executeTask(it.apply { actionType = ActionType.Pause })
             }
-            getString(R.string.pause) -> app.ongoingDownloads.getById(
+            getString(R.string.pause) -> appModule.ongoingDownloads.getById(
                 intent.getLongExtra(getString(R.string.pause), -1)
             )?.let {
                 executeTask(it.apply { actionType = ActionType.Pause })

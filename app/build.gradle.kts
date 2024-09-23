@@ -17,7 +17,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "blackorbs.dev.jetfiledownloader.CustomTestRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -100,7 +100,11 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.core.testing)
+    androidTestImplementation(libs.androidx.ui.test.android)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    androidTestImplementation(libs.mockwebserver)
+    androidTestImplementation(libs.okhttp3.idling.resource)
 }

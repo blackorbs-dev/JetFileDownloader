@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
@@ -148,10 +149,11 @@ internal fun DownloadPage(
     onDownloadRequest: (Download) -> Unit,
     onShowInfo: (Long) -> Unit
 ){
-    val mainApp = context.applicationContext as MainApp
+    val appModule = remember {
+        (context.applicationContext as MainApp).appModule
+    }
     val downloads = downloadVm.downloads.collectAsLazyPagingItems()
-    val itemCount =
-        downloads.itemCount + mainApp.newDownloadsCount.intValue
+    val itemCount = downloads.itemCount + appModule.newDownloadsCount.intValue
 
     fun handleOnclick(download: Download){
         when(download.actionType) {
@@ -361,7 +363,8 @@ internal fun DownloadItem(
                                 else R.drawable.ic_play_circle_24
                             ),
                             modifier = Modifier.sizeIn(minWidth = 35.dp, minHeight = 35.dp),
-                            contentDescription = stringResource(download.status.value.titleResID)
+                            contentDescription = "${if(download.isPending) stringResource(R.string.pause)
+                            else stringResource(R.string.resume)} ${download.fileName}"
                         )
                     }
                 }
@@ -583,8 +586,10 @@ fun LazyColumnWithLoadingState(
     content: LazyListScope.() -> Unit
 ){
     LazyColumn(
-        modifier = if(itemCount == 0) modifier
-        else Modifier.fillMaxWidth(),
+        modifier = if(itemCount == 0) modifier.testTag("Downloads list")
+        else Modifier
+            .fillMaxWidth()
+            .testTag("Downloads list"),
         contentPadding = PaddingValues(bottom = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = if(itemCount == 0)

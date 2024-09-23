@@ -1,31 +1,29 @@
 package blackorbs.dev.jetfiledownloader.repository
 
-import android.app.Application
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import blackorbs.dev.jetfiledownloader.MainApp
+import blackorbs.dev.jetfiledownloader.BaseAppModule
 import blackorbs.dev.jetfiledownloader.entities.Download
 import blackorbs.dev.jetfiledownloader.entities.Status
 import java.io.File
 
-class DownloadsPagingSource(app: Application?): PagingSource<Int, Download>() {
+class DownloadsPagingSource(private val appModule: BaseAppModule): PagingSource<Int, Download>() {
     private val limit = 20
-    private val mainApp = app as MainApp
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Download> {
         val page = params.key ?: 0
-        val downloads = mainApp.downloadDao.getAll(
-            page.toLong()*limit+mainApp.newDownloadsCount.intValue,
+        val downloads = appModule.downloadDao.getAll(
+            page.toLong()*limit+appModule.newDownloadsCount.intValue,
             limit = limit
         ).map { download ->
             if(download.status.value == Status.Error){
-                mainApp.errorDownloads.add(download)
+                appModule.errorDownloads.add(download)
             }
-            mainApp.ongoingDownloads.indexOfFirst {
+            appModule.ongoingDownloads.indexOfFirst {
                 item -> item.id == download.id
             }.run {
                 if(this != -1){
-                    return@map mainApp.ongoingDownloads[this]
+                    return@map appModule.ongoingDownloads[this]
                 }
             }
             when{
