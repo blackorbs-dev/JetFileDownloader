@@ -3,6 +3,7 @@ package blackorbs.dev.jetfiledownloader.helpers
 import android.util.Patterns
 
 object LinkHelper {
+    const val TEST_FILENAME = "test.pdf"
     const val INIT_URL = "https://www.kefblog.com.ng"
 
     fun getValidUrl(text: String) = when{

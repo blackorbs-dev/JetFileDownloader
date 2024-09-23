@@ -6,7 +6,7 @@ import blackorbs.dev.jetfiledownloader.entities.Status
 import java.time.LocalDateTime
 
 object TestUtil {
-    private var id = 1L
+    private var id = 0L
 
     fun testDownload(status: Status = Status.Queued) = Download(
         "google.com", "test.pdf", 1200,

@@ -66,4 +66,11 @@
     <string name="formated_size">%1$s of </string>
     <string name="details">File Info</string>
     <string name="download_not_completed">Download not completed yet!</string>
+    <string name="delete_all">Delete selection</string>
+    <string name="share_all">Share selection</string>
+    <string name="show_menu">Show Navigation Menu</string>
+    <string name="hide_menu">Hide Navigation Menu</string>
+    <string name="clear_input">Clear input</string>
+    <string name="reload">Reload</string>
+    <string name="go_forward">Go forward</string>
 </resources>

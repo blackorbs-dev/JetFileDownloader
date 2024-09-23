@@ -1,12 +1,9 @@
 package blackorbs.dev.jetfiledownloader.repository
 
-import android.app.Application
-import blackorbs.dev.jetfiledownloader.MainApp
+import blackorbs.dev.jetfiledownloader.data.FavoriteDao
 import blackorbs.dev.jetfiledownloader.entities.Favorite
 
-class FavoriteRepository(app: Application?) : BaseFavoriteRepository {
-
-    private val dao = (app as MainApp).favoriteDao
+class FavoriteRepository(private val dao: FavoriteDao) : BaseFavoriteRepository {
 
     override suspend fun getAll() = dao.getAll()
 

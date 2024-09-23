@@ -10,9 +10,11 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import blackorbs.dev.jetfiledownloader.MainApp
 import blackorbs.dev.jetfiledownloader.entities.Favorite
 import blackorbs.dev.jetfiledownloader.repository.BaseFavoriteRepository
 import blackorbs.dev.jetfiledownloader.repository.FavoriteRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -27,7 +29,7 @@ class FavViewModel(
         private set
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _favoriteItems.addAll(
                 repository.getAll()
             )
@@ -88,7 +90,10 @@ class FavViewModel(
         val Factory = viewModelFactory {
             initializer {
                 FavViewModel(
-                    FavoriteRepository(this[APPLICATION_KEY])
+                    FavoriteRepository(
+                        (this[APPLICATION_KEY] as MainApp)
+                            .appModule.favoriteDao
+                    )
                 )
             }
         }

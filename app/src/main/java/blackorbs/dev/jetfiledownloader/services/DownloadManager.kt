@@ -33,7 +33,7 @@ class DownloadManager(
     lateinit var permissionManager: PermissionManager
     private var downloadService: DownloadService? = null
     private val serviceConnection: ServiceConnection
-    private val app = (context.applicationContext as MainApp)
+    private val appModule = (context.applicationContext as MainApp).appModule
         .apply { newDownloadsCount.intValue = 0 }
     private val pendingDownloads = ConcurrentLinkedQueue<Download>()
     private var isRunning = false
@@ -81,7 +81,7 @@ class DownloadManager(
                         }
                         download.filePath = "${downloadFolder}/${download.fileName}"
                         download.errorIndex =
-                            app.errorDownloads.indexOfFirst { it.fileName == download.fileName }
+                            appModule.errorDownloads.indexOfFirst { it.fileName == download.fileName }
                         var num = 0
                         val type = ".${download.type}"
                         val name = download.fileName.replace(type, "")
@@ -97,7 +97,7 @@ class DownloadManager(
                         var newDownload = download
                         newDownload.dateTime = LocalDateTime.now()
                         newDownload = downloadVm.add(newDownload)
-                        app.newDownloadsCount.intValue++
+                        appModule.newDownloadsCount.intValue++
                         continueDownload(newDownload)
                     }
                     isRunning = false
@@ -118,7 +118,7 @@ class DownloadManager(
 
     fun onSelectedAction(actionType: ActionType) = when(actionType){
         ActionType.Delete -> downloadVm.deleteSelectedItems()
-        ActionType.Share -> downloadVm.shareSelection(context)
+        ActionType.Share -> downloadVm.shareSelection(context.applicationContext)
         else -> {}
     }
 
@@ -130,7 +130,7 @@ class DownloadManager(
         if(download != null){
             if(input.isEmpty()){
                 if(download.errorIndex != -1){ // resume failed download
-                    download = app.errorDownloads[download.errorIndex]
+                    download = appModule.errorDownloads[download.errorIndex]
                         .apply {
                             url = download!!.url
                             actionType = ActionType.Resume

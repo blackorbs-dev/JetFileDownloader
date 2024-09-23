@@ -12,24 +12,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DismissibleDrawerSheet
-import androidx.compose.material3.DismissibleNavigationDrawer
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -51,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -82,7 +82,7 @@ internal fun MainScreen(
         onMessage = appState::showMessage
     )
 ){
-    DismissibleNavigationDrawer(
+    ModalNavigationDrawer(
         drawerContent = {
             NavBar(currentPage = appState.currentPage.value) { page ->
                 appState.navController.load(page)
@@ -181,8 +181,8 @@ internal fun NavBar(currentPage: Page, onNavItemClicked: (page: Page) -> Unit){
                 start = Offset(Float.POSITIVE_INFINITY,1200f),
                 end = Offset(0f, Float.POSITIVE_INFINITY)
             ),
-            shape = RoundedCornerShape(bottomEnd = 24.dp)
-        ),
+            shape = RoundedCornerShape(bottomEnd = 18.dp)
+        ).widthIn(max = 350.dp),
         drawerContainerColor = Color.Transparent
     ) {
         Icon(
@@ -239,7 +239,8 @@ internal fun TopBar(
                 TextField(
                     value = value,
                     onValueChange = { value = it },
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardOptions = KeyboardOptions(
+                        imeAction = ImeAction.Go),
                     keyboardActions = KeyboardActions(onGo = {
                         focusManager.clearFocus()
                         onLoadAction(value)
@@ -249,7 +250,7 @@ internal fun TopBar(
                             IconButton(onClick = { value = "" }) {
                                 Icon(
                                     painterResource(R.drawable.ic_close_24),
-                                    contentDescription = stringResource(R.string.cancel),
+                                    contentDescription = stringResource(R.string.clear_input),
                                     tint = MaterialTheme.colorScheme.onPrimary
                                 )
                             }
@@ -262,7 +263,8 @@ internal fun TopBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged { isFocused = it.isFocused }
-                        .padding(start = 10.dp, end = 10.dp),
+                        .padding(start = 10.dp, end = 10.dp)
+                        .testTag(stringResource(R.string.enter_url)),
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.onSurface,
                         unfocusedContainerColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -282,11 +284,18 @@ internal fun TopBar(
             }
         },
         navigationIcon = {
-            IconButton(onClick = { onMenuClicked() }) {
+            IconButton(
+                onClick = { onMenuClicked() }
+            ) {
                 Icon(
-                    if(isDrawerClosed) Icons.Filled.Menu
-                    else Icons.Filled.Close,
-                    contentDescription = stringResource(R.string.home)
+                    painterResource(
+                        if(isDrawerClosed) R.drawable.ic_menu_24
+                        else R.drawable.ic_close_24
+                    ),
+                    contentDescription = stringResource(
+                        if(isDrawerClosed) R.string.show_menu
+                        else R.string.hide_menu
+                    )
                 )
             }
         },
@@ -295,7 +304,7 @@ internal fun TopBar(
                 TopIconButton(
                     iconResId = if(isFavorite) R.drawable.ic_favorite_24
                                  else R.drawable.ic_favorite_border_24,
-                    contentDescResId = R.string.favorite
+                    contentDescResId = R.string.fav_added
                 ) { onFavIconClicked() }
             }
             else if(currentPage is Page.DownloadList){
@@ -305,11 +314,11 @@ internal fun TopBar(
                 else if(selectedItemsCount > 1){
                     TopIconButton(
                         iconResId = R.drawable.ic_share_24,
-                        contentDescResId = R.string.share
+                        contentDescResId = R.string.share_all
                     ) { onDownloadAction(ActionType.Share) }
                     TopIconButton(
                         iconResId = R.drawable.ic_delete_sweep_24,
-                        contentDescResId = R.string.delete
+                        contentDescResId = R.string.delete_all
                     ) { onDownloadAction(ActionType.Delete) }
                 }
             }
@@ -337,10 +346,13 @@ internal fun FloatingActionButtons(onFabClicked: (webAction: WebAction) -> Unit)
 
     val fabState = rememberFABState()
 
-    FloatingActionButton(onClick = { onFabClicked(WebAction.GoForward) }, Modifier.offset { fabState.posForward.value }) {
+    FloatingActionButton(
+        onClick = { onFabClicked(WebAction.GoForward) },
+        Modifier.offset { fabState.posForward.value }
+    ) {
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription =  stringResource(R.string.navigate),
+            contentDescription =  stringResource(R.string.go_forward),
             Modifier.scale(1.5f),
             tint = MaterialTheme.colorScheme.background
         )
@@ -348,7 +360,7 @@ internal fun FloatingActionButtons(onFabClicked: (webAction: WebAction) -> Unit)
     FloatingActionButton(onClick = { onFabClicked(WebAction.GoBack) }, Modifier.offset { fabState.posBack.value }) {
         Icon(
             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-            stringResource(R.string.navigate),
+            stringResource(R.string.go_back),
             Modifier.scale(1.5f),
             tint = MaterialTheme.colorScheme.background
         )
@@ -356,7 +368,7 @@ internal fun FloatingActionButtons(onFabClicked: (webAction: WebAction) -> Unit)
     FloatingActionButton(onClick = {onFabClicked(WebAction.Reload) }, Modifier.offset {fabState.posRefresh.value}) {
         Icon(
             Icons.Filled.Refresh,
-            stringResource(R.string.navigate),
+            stringResource(R.string.reload),
             Modifier.scale(1.3f),
             tint = MaterialTheme.colorScheme.background
         )
@@ -423,7 +435,7 @@ fun NavController.load(page: Page) = navigate(page){
         saveState = true
     }
     launchSingleTop = true
-    restoreState = true
+    restoreState = page !is Page.FileInfo
 }
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -434,7 +446,7 @@ fun MainScreenPreview(){
         Scaffold(
             topBar = {
                 TopBar(
-                    currentPage = Page.FileInfo(-1),
+                    currentPage = Page.Home(),
                     isDrawerClosed = true,
                     onMenuClicked = {},
                     onFavIconClicked = {},

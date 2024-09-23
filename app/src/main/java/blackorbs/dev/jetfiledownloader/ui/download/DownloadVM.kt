@@ -20,6 +20,7 @@ import blackorbs.dev.jetfiledownloader.entities.Status
 import blackorbs.dev.jetfiledownloader.repository.BaseDownloadRepository
 import blackorbs.dev.jetfiledownloader.repository.DownloadRepository
 import blackorbs.dev.jetfiledownloader.ui.shareFiles
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -52,7 +53,8 @@ class DownloadVM(
     }
 
     fun getDownload(id: Long){
-        viewModelScope.launch {
+        _download.value = null
+        viewModelScope.launch(Dispatchers.IO) {
             _download.value = repo.get(id)
         }
     }
@@ -113,10 +115,10 @@ class DownloadVM(
     companion object{
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
-                val app = this[APPLICATION_KEY] as MainApp
-                DownloadVM( DownloadRepository(app)).apply {
+                val appModule = (this[APPLICATION_KEY] as MainApp).appModule
+                DownloadVM( DownloadRepository(appModule)).apply {
                     downloadCountUpdater = {
-                        app.newDownloadsCount.intValue -= it
+                        appModule.newDownloadsCount.intValue -= it
                     }
                 }
             }

@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,13 +58,14 @@ internal fun InfoPage(
     onShouldGoBack: () -> Unit
 ){
     val download = downloadVm.download.value
-    downloadVm.getDownload(downloadId)
+    LaunchedEffect(downloadId) {
+        downloadVm.getDownload(downloadId)
+    }
 
-    MainLayout(
-        download,
+    MainLayout(download,
         onDownloadAction = {
             when(it){
-                ActionType.None -> { onShouldGoBack() }
+                ActionType.None -> onShouldGoBack()
                 ActionType.Share ->
                     download?.run {context.shareFiles(listOf(filePath))}
                 ActionType.Delete -> {
@@ -96,7 +98,8 @@ fun MainLayout(
     onDownloadAction: (ActionType) -> Unit
 ){
     Column(
-        Modifier.fillMaxSize()
+        Modifier
+            .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
@@ -105,7 +108,8 @@ fun MainLayout(
                     ),
                     startY = 500f
                 ),
-            ).padding(10.dp),
+            )
+            .padding(10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
@@ -115,11 +119,11 @@ fun MainLayout(
         ){
             TopIconButton(
                 iconResId = R.drawable.ic_keyboard_backspace_24,
-                contentDescResId = R.string.go_back,
+                contentDescResId = R.string.go_back
             ) { onDownloadAction(ActionType.None) }
             TopIconButton(
                 iconResId = R.drawable.ic_share_24,
-                contentDescResId = R.string.share,
+                contentDescResId = R.string.share
             ) { onDownloadAction(ActionType.Share) }
         }
         if(download == null){
@@ -239,7 +243,8 @@ internal sealed interface ListItem{
 fun MainPreview(){
     JetTheme {
         Scaffold {
-            MainLayout(Download(
+            MainLayout(
+                Download(
                 url = "https://www.google.com/download-test-document-psf-testtetdgd", fileName = "Esnglish-textagsgsghsghsdgfhjhgddhgfhgd.pdf", totalSize = 145670L,
                 status = mutableStateOf(Status.Paused.apply { text = "Some error occured" })
             ).apply {
