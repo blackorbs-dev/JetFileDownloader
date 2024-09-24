@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class DownloadVM(
@@ -68,13 +69,15 @@ class DownloadVM(
                 it.isPendingDelete.value = true
             }
             delay(4000)
-            _selectedDownloads.forEach {
-                with(it){
-                    if(isPendingDelete.value){
-                        status.value = Status.Deleted
-                        repo.delete(this)
-                        with(File(filePath)) {
-                           if(exists()) delete()
+            withContext(Dispatchers.IO){
+                _selectedDownloads.forEach {
+                    with(it){
+                        if(isPendingDelete.value){
+                            status.value = Status.Deleted
+                            repo.delete(this)
+                            with(File(filePath)) {
+                                if(exists()) delete()
+                            }
                         }
                     }
                 }
